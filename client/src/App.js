@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import PresaleDBTContract from "./contracts/PresaleDBT.sol/PresaleDBT.json";
 import PresaleDIGContract from "./contracts/PresaleDIG.sol/PresaleDIG.json";
+import DIGcontract from "./contracts/DigitalGolems.sol/DigitalGolems.json";
 import Signs from "./signatures/signs.json"
 import getWeb3 from "./getWeb3";
 import "./App.css";
@@ -11,10 +12,10 @@ import {
   Link
 } from "react-router-dom";
 import Tabletop from 'tabletop'
-// import fetch from "node-fetch";
-import DIG from "./lists/DIG";
-import DBT from "./lists/DBT";
-import Index from "./lists/Index"
+import DIG from "./routes/DIG";
+import DBT from "./routes/DBT";
+import Index from "./routes/Index";
+import MintDIG from "./routes/MintDIG";
 
 class App extends Component {
   state = {
@@ -22,10 +23,12 @@ class App extends Component {
     account: null,
     contractDBT: null,
     contractDIG: null,
+    DIG: null,
     amount: 0,
     priceDBT: "0.00007",
     priceDIG:"0.07",
-    signDBT: {}
+    signDBT: {},
+    isOwner: false
   };
 
   // createMarketItem = this.createMarketItem.bind(this)
@@ -44,8 +47,12 @@ class App extends Component {
       const instanceDIG = new web3.eth.Contract(
         PresaleDIGContract.abi
       );
+      const dig = new web3.eth.Contract(
+        DIGcontract.abi
+      );
       instanceDBT.options.address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
       instanceDIG.options.address = "0x9E545E3C0baAB3E08CdfD552C960A1050f373042"
+      dig.options.address = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
       // function init() {
         // Tabletop.init({
         //   key: "1ApFO_MzKw4tvXOyhbiuOYHGUCxyhmnmgXGIuV_a2E9s",
@@ -84,6 +91,11 @@ class App extends Component {
       if (flag === false) {
         throw "error"
       }
+      if (accounts[0] === '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266') {
+        this.setState({
+          isOwner: true
+        })
+      }
       // const accounts = await window.ethereum.request({
       //   method: "eth_requestAccounts"
       // });
@@ -92,6 +104,7 @@ class App extends Component {
         web3,
         contractDBT: instanceDBT,
         contractDIG: instanceDIG,
+        DIG: dig,
         signDBT: newSign
       }, this.runExample);
     } catch (error) {
@@ -123,9 +136,9 @@ class App extends Component {
     // await contractDIG.methods.mockRound1StartTime(
     //     (parseInt(startTime) - secondsInADay * 2).toString()
     // ).send({from: account})
-    await contractDBT.methods.mockRound1StartTime(
-            (parseInt(startTime) - secondsInADay * 2).toString()
-        ).send({from: account})
+    // await contractDBT.methods.mockRound1StartTime(
+    //         (parseInt(startTime) - secondsInADay * 2).toString()
+    //     ).send({from: account})
   };
 
   buyDBT = this.buyDBT.bind(this)
@@ -241,6 +254,15 @@ class App extends Component {
 
   changeAccount = this.changeAccount.bind(this)
 
+  async ownerMint(address, url) {
+      const { account, web3, DIG } = this.state
+      await DIG.methods.ownerMint(
+        address, url
+        ).send({from: account})
+  }
+
+  ownerMint = this.ownerMint.bind(this)
+
   render() {
     if (!this.state.web3) {
       return <div>Loading...</div>;
@@ -264,6 +286,17 @@ class App extends Component {
             <li>
               <Link to="/dbt"><button type="button" className="btn btn-outline-primary">Digibytes</button></Link>
             </li>
+            <br/>
+              {this.state.isOwner
+                ?
+                <div>
+                  <li>
+                    <Link to="/mintdig"><button type="button" className="btn btn-outline-primary">Owner Mint DIG</button></Link>
+                  </li>
+                </div>
+                :
+                ''
+              }
           </ul>
         </nav>
 
@@ -275,6 +308,8 @@ class App extends Component {
           <Route path="/dig" element={<DIG addDIGToMetamask={this.addDIGToMetamask} price={this.state.priceDIG} buy={this.buyDIG}/>}>
           </Route>
           <Route path="/dbt" element={<DBT addTokenToMetamask={this.addTokenToMetamask} price={this.state.priceDBT} buy={this.buyDBT}/>}>
+          </Route>
+          <Route path="/mintdig" element={<MintDIG ownerMint={this.ownerMint}/>}>
           </Route>
         </Routes>
 </div>
