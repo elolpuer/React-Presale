@@ -2,7 +2,8 @@ import React, { Component } from "react";
 import PresaleDBTContract from "./contracts/PresaleDBT.sol/PresaleDBT.json";
 import PresaleDIGContract from "./contracts/PresaleDIG.sol/PresaleDIG.json";
 import DIGcontract from "./contracts/DigitalGolems.sol/DigitalGolems.json";
-import Signs from "./signatures/signs.json"
+import SignsDBT from "./signatures/signsDBT.json"
+import SignsDIG from "./signatures/signsDIG.json"
 import getWeb3 from "./getWeb3";
 import "./App.css";
 import {
@@ -11,11 +12,10 @@ import {
   Route,
   Link
 } from "react-router-dom";
-import Tabletop from 'tabletop'
 import DIG from "./routes/DIG";
 import DBT from "./routes/DBT";
 import Index from "./routes/Index";
-import MintDIG from "./routes/MintDIG";
+import Owner from "./routes/Owner";
 
 class App extends Component {
   state = {
@@ -24,10 +24,13 @@ class App extends Component {
     contractDBT: null,
     contractDIG: null,
     DIG: null,
-    amount: 0,
     priceDBT: "0.00007",
-    priceDIG:"0.07",
+    priceDIG:"0.03",
+    nftAmount: 0,
+    dbtPresaleClose: false,
+    digPresaleClose: false,
     signDBT: {},
+    signDIG: {},
     isOwner: false
   };
 
@@ -50,24 +53,10 @@ class App extends Component {
       const dig = new web3.eth.Contract(
         DIGcontract.abi
       );
-      instanceDBT.options.address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
-      instanceDIG.options.address = "0x9E545E3C0baAB3E08CdfD552C960A1050f373042"
-      dig.options.address = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-      // function init() {
-        // Tabletop.init({
-        //   key: "1ApFO_MzKw4tvXOyhbiuOYHGUCxyhmnmgXGIuV_a2E9s",
-        //   simpleSheet: true
-        // }).then((error, data, tabletop) => {
-        //   console.log("Error", error)
-        //   console.log(data, tabletop)
-        // })
-        // fetch("http://docs.google.com/spreadsheets/d/1ApFO_MzKw4tvXOyhbiuOYHGUCxyhmnmgXGIuV_a2E9s",{
-        //   method: "GET"
-        // }).then(async (res) => {
-        //   console.log(await res.json())
-        // })
+      instanceDBT.options.address = "0x07882Ae1ecB7429a84f1D53048d35c4bB2056877"
+      instanceDIG.options.address = "0x34B40BA116d5Dec75548a9e9A8f15411461E8c70"
+      dig.options.address = "0xc96304e3c037f81dA488ed9dEa1D8F2a48278a75"
 
-      // }
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
       const accounts = await window.ethereum.request({
@@ -76,9 +65,19 @@ class App extends Component {
       this.setState({
         account: accounts[0]
       })
+      const nft = await dig.methods.balanceOf(accounts[0]).call()
+      const dbtPresaleClose = await instanceDBT.methods.hasClosed().call()
+      const digPresaleClose = await instanceDIG.methods.hasRound1Closed().call()
+      this.setState({
+        dbtPresaleClose,
+        digPresaleClose
+      })
+      this.setState({
+        nftAmount: nft
+      })
       let flag = false;
       let newSign = {}
-      Signs.map(
+      SignsDBT.map(
         (value) => {
           if(value.address === accounts[0]) {
             flag = true
@@ -88,7 +87,19 @@ class App extends Component {
           }
         }
       )
-      if (flag === false) {
+      let flag1 = false;
+      let newSign2 = {}
+      SignsDIG.map(
+        (value) => {
+          if(value.address === accounts[0]) {
+            flag1 = true
+            newSign2.v = value.v
+            newSign2.r = value.r
+            newSign2.s = value.s
+          }
+        }
+      )
+      if ((flag1 === false) || (flag === false)) {
         throw "error"
       }
       if (accounts[0] === '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266') {
@@ -105,7 +116,8 @@ class App extends Component {
         contractDBT: instanceDBT,
         contractDIG: instanceDIG,
         DIG: dig,
-        signDBT: newSign
+        signDBT: newSign,
+        signDIG: newSign2
       }, this.runExample);
     } catch (error) {
       // Catch any errors for any of the above operations.
@@ -118,8 +130,7 @@ class App extends Component {
 
   runExample = async () => {
     // const web3 = await getWeb3();
-    // const price = await contract.methods.getRound1Price().call()
-    // console.log(price)
+
     // this.setState({
     //   price
     // })
@@ -132,7 +143,10 @@ class App extends Component {
     // this.setState({
     //   account: accounts[0]
     // })
-    const { account, contractDIG, contractDBT } = this.state;
+    const { account, contractDIG, contractDBT, DIG } = this.state;
+
+    // const price = await contractDIG.methods.getRound1Price().call()
+    // console.log(price)
     // await contractDIG.methods.mockRound1StartTime(
     //     (parseInt(startTime) - secondsInADay * 2).toString()
     // ).send({from: account})
@@ -145,17 +159,24 @@ class App extends Component {
   buyDIG = this.buyDIG.bind(this)
 
   async buyDIG(amount) {
-    const {account, contractDIG, priceDIG, web3} = this.state
+    const {account, contractDIG, priceDIG, web3, signDIG, DIG } = this.state
     const priceSend = web3.utils.toWei(priceDIG)
     const value = parseInt(amount) * parseInt(priceSend)
-    const r = '0x7b9344a8f89f2cdd33ff0b4fb1a0a179ac7d26c5df456d4234f61f4eff80672e'
-    const s = '0x00e4cc53ce5d6e2f2d4487b115092d424ba40e0877d2a29be5625e49da4a96dc'
-    const v = 27
+    const r = signDIG.r
+    const s = signDIG.s
+    const v = signDIG.v
     await contractDIG.methods.buyDIGRound1(
       v,
       r,
       s
-      ).send({from: account, value})
+      )
+      .send({from: account, value})
+      .then(async () => {
+        const nft = await DIG.methods.balanceOf(account).call()
+        this.setState({
+          nftAmount: nft
+        })
+      })
   }
 
   async buyDBT(amount) {
@@ -181,37 +202,9 @@ class App extends Component {
       console.log(parseInt(this.state.amount) * parseInt(this.state.priceSend))
   }
 
-  async addDIGToMetamask() {
-      const digAddress = '0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB'
-      const digSymbol = 'DIG'
-      const tokenDecimals = 0;
-      try {
-        // wasAdded is a boolean. Like any RPC method, an error may be thrown.
-        const wasAdded = await window.ethereum.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC20', // Initially only supports ERC20, but eventually more!
-            options: {
-              address: digAddress, // The address that the token is at.
-              symbol: digSymbol, // A ticker symbol or shorthand, up to 5 chars.
-              decimals: tokenDecimals // The number of decimals in the token
-            },
-          },
-        });
-
-        if (wasAdded) {
-          console.log('Thanks for your interest!');
-        } else {
-          console.log('Your loss!');
-        }
-      } catch (error) {
-        console.log(error);
-      }
-  }
-
   //dig 0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB
   async addTokenToMetamask() {
-      const tokenAddress = '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9'
+      const tokenAddress = '0xD0141E899a65C95a556fE2B27e5982A6DE7fDD7A'
       const tokenSymbol = 'DBT';
       const tokenDecimals = 18;
 
@@ -255,13 +248,34 @@ class App extends Component {
   changeAccount = this.changeAccount.bind(this)
 
   async ownerMint(address, url) {
-      const { account, web3, DIG } = this.state
+      const { account, DIG } = this.state
       await DIG.methods.ownerMint(
         address, url
         ).send({from: account})
   }
 
   ownerMint = this.ownerMint.bind(this)
+
+  async endDBTPresale() {
+      const { account, contractDBT } = this.state
+      await contractDBT.methods.closePresale().send({from: account})
+  }
+
+  endDBTPresale = this.endDBTPresale.bind(this)
+
+  async endDIGPresale() {
+      const { account, contractDIG } = this.state
+      await contractDIG.methods.closeRound1Presale().send({ from: account })
+  }
+
+  endDIGPresale = this.endDIGPresale.bind(this)
+
+  async withdrawDBT() {
+      const { account, contractDBT } = this.state
+      await contractDBT.methods.withdrawDBT().send({ from: account })
+  }
+
+  withdrawDBT = this.withdrawDBT.bind(this)
 
   render() {
     if (!this.state.web3) {
@@ -291,7 +305,7 @@ class App extends Component {
                 ?
                 <div>
                   <li>
-                    <Link to="/mintdig"><button type="button" className="btn btn-outline-primary">Owner Mint DIG</button></Link>
+                    <Link to="/owner"><button type="button" className="btn btn-outline-primary">Owner Functions</button></Link>
                   </li>
                 </div>
                 :
@@ -305,11 +319,18 @@ class App extends Component {
         <Routes>
           <Route path="/" element={<Index changeAccount={this.changeAccount} account={this.state.account}/>}>
           </Route>
-          <Route path="/dig" element={<DIG addDIGToMetamask={this.addDIGToMetamask} price={this.state.priceDIG} buy={this.buyDIG}/>}>
+          <Route path="/dig" element={<DIG digPresaleClose={this.state.digPresaleClose} nftAmount={this.state.nftAmount} addDIGToMetamask={this.addDIGToMetamask} price={this.state.priceDIG} buy={this.buyDIG}/>}>
           </Route>
-          <Route path="/dbt" element={<DBT addTokenToMetamask={this.addTokenToMetamask} price={this.state.priceDBT} buy={this.buyDBT}/>}>
+          <Route path="/dbt" element={<DBT dbtPresaleClose={this.state.dbtPresaleClose} addTokenToMetamask={this.addTokenToMetamask} price={this.state.priceDBT} buy={this.buyDBT}/>}>
           </Route>
-          <Route path="/mintdig" element={<MintDIG ownerMint={this.ownerMint}/>}>
+          <Route path="/owner" element={
+            <Owner
+              ownerMint = { this.ownerMint }
+              endDBTPresale = { this.endDBTPresale }
+              endDIGPresale = { this.endDIGPresale }
+              withdrawDBT = { this.withdrawDBT }
+            />
+          }>
           </Route>
         </Routes>
 </div>

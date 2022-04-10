@@ -20,9 +20,9 @@ class DIG extends React.Component {
           <div>
           <br/>
             <h3>BUY DIG</h3>
-
+            <h6>Presale is { this.props.digPresaleClose === false ? "open" : "close"}</h6>
             <div>
-              <button onClick={() => {this.props.addDIGToMetamask()}}  className="btn btn-outline-success" type="button">Add DIG to Metamask</button>
+              Your DIG amount: {this.props.nftAmount}
             </div>
             <br/>
             <p>Price Per One: {this.props.price} ETH</p>

@@ -20,7 +20,7 @@ class DBT extends React.Component {
                 <div>
                 <br/>
                   <h3>BUY DBT</h3>
-
+                  <h6>Presale is {this.props.dbtPresaleClose === false ? "open" : "close"}</h6>
                   <div>
                     <button onClick={() => this.props.addTokenToMetamask()} className="btn btn-outline-success" type="button">Add DBT to Metamask</button>
                   </div>

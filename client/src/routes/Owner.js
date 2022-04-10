@@ -1,6 +1,6 @@
 import React from 'react'
 
-class MintDIG extends React.Component {
+class Owner extends React.Component {
     constructor(props){
         super(props)
         this.state = {
@@ -26,7 +26,8 @@ class MintDIG extends React.Component {
             return (
               <div>
               <br/>
-                <h3>Owner Mint DIG</h3>
+                <h2>Owner Functions</h2>
+                <h3>Mint DIG</h3>
                 <div className="input-group input-group-sm mb-3">
                   <div className="input-group-prepend">
                     <span className="input-group-text" id="inputGroup-sizing-sm">Address</span>
@@ -40,9 +41,19 @@ class MintDIG extends React.Component {
                   <input value={this.state.url} onChange={this.changeURL} type="text" className="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm" required/>
                 </div>
                 <button onClick={() => this.props.ownerMint(this.state.address, this.state.url)} className="btn btn-success" type="button">MINT</button>
+
+                <div className="buttonOwner">
+                  <button onClick={() => this.props.endDBTPresale()} className="btn btn-danger" type="button">End DBT Presale</button>
+                </div>
+                <div className="buttonOwner">
+                  <button onClick={() => this.props.endDIGPresale()} className="btn btn-danger" type="button">End DIG Presale</button>
+                </div>
+                <div className="buttonOwner">
+                  <button onClick={() => this.props.withdrawDBT()} className="btn btn-primary" type="button">Withdraw DBT From DBT Presale</button>
+                </div>
               </div>
             )
     }
 }
 
-export default MintDIG;
+export default Owner;
